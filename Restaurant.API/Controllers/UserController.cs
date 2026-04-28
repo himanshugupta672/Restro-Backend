@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Restaurant.Application.DTOs;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -11,43 +13,40 @@ public class UserController : ControllerBase
         _service = service;
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpGet]
     public async Task<IActionResult> Get()
     {
         return Ok(await _service.GetAllAsync());
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpGet("chefs")]
     public async Task<IActionResult> GetChefs()
     {
         return Ok(await _service.GetChefsAsync());
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost]
-    public async Task<IActionResult> Create(User user)
+    public async Task<IActionResult> Create(CreateUserDto dto)
     {
-        await _service.AddAsync(user);
-        return Ok(user);
+        await _service.CreateByAdminAsync(dto);
+        return Ok("User created successfully");
     }
 
-    [HttpPut("available/{id}")]
-    public async Task<IActionResult> SetAvailable(int id)
+    [AllowAnonymous]
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(CreateUserDto dto)
     {
-        await _service.SetAvailable(id);
-        return Ok();
-    }
-
-    [HttpPut("busy/{id}")]
-    public async Task<IActionResult> SetBusy(int id)
-    {
-        await _service.SetBusy(id);
-        return Ok();
-    }
-
-    [HttpPut("offline/{id}")]
-    public async Task<IActionResult> SetOffline(int id)
-    {
-        await _service.SetOffline(id);
-        return Ok();
+        try
+        {
+            await _service.RegisterChefAsync(dto);
+            return Ok("Chef registered successfully");
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }

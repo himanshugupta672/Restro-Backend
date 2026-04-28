@@ -7,4 +7,5 @@ public class Table
     public int TableNumber { get; set; }
 
     public bool IsActive { get; set; }
+    public string Token { get; set; }
 }

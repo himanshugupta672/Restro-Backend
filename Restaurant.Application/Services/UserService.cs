@@ -1,4 +1,6 @@
-﻿public class UserService : IUserService
+﻿using Restaurant.Application.DTOs;
+
+public class UserService : IUserService
 {
     private readonly IUserRepository _repository;
 
@@ -20,11 +22,6 @@
     public async Task<List<User>> GetChefsAsync()
     {
         return await _repository.GetChefsAsync();
-    }
-
-    public async Task AddAsync(User user)
-    {
-        await _repository.AddAsync(user);
     }
 
     public async Task SetAvailable(int userId)
@@ -58,5 +55,40 @@
         var chefs = await _repository.GetAvailableChefsAsync();
 
         return chefs.FirstOrDefault();
+    }
+    public async Task RegisterChefAsync(CreateUserDto dto)
+    {
+        var existing = await _repository.GetByEmailAsync(dto.Email);
+
+        if (existing != null)
+            throw new Exception("User already exists");
+
+        var user = new User
+        {
+            Name = dto.Name,
+            Email = dto.Email,
+            Password = dto.Password,
+            Role = UserRole.Chef,
+            Status = UserStatus.Available,
+            LastAssignedAt = DateTime.UtcNow
+        };
+
+        await _repository.AddAsync(user); 
+    }
+
+    public async Task CreateByAdminAsync(CreateUserDto dto)
+    {
+        var user = new User
+        {
+            Name = dto.Name,
+            Email = dto.Email,
+            Password = dto.Password,
+
+            Role = (UserRole)dto.Role, // admin decides
+            Status = UserStatus.Available,
+            LastAssignedAt = DateTime.UtcNow
+        };
+
+        await _repository.AddAsync(user);
     }
 }

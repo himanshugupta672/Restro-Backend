@@ -9,4 +9,5 @@ public interface ITableService
     Task AddAsync(Table table);
     Task UpdateAsync(Table table);
     Task DeleteAsync(int id);
+    Task<Table?> GetByTokenAsync(string token);
 }

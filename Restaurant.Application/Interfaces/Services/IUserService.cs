@@ -1,4 +1,5 @@
-﻿using Restaurant.Domain.Entities;
+﻿using Restaurant.Application.DTOs;
+using Restaurant.Domain.Entities;
 
 public interface IUserService
 {
@@ -8,7 +9,8 @@ public interface IUserService
 
     Task<List<User>> GetChefsAsync();
 
-    Task AddAsync(User user);
+    Task RegisterChefAsync(CreateUserDto dto);
+    Task CreateByAdminAsync(CreateUserDto dto);
 
     Task SetAvailable(int userId);
 

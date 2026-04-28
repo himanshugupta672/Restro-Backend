@@ -9,4 +9,6 @@ public interface IMenuItemService
     Task AddAsync(MenuItem item);
     Task UpdateAsync(MenuItem item);
     Task DeleteAsync(int id);
+
+    Task<IEnumerable<MenuItem>> GetMenuByCategory(int categoryId);
 }

@@ -28,6 +28,13 @@ public class OrderRepository : IOrderRepository
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
+    public async Task<Order?> GetPendingByTableIdAsync(int tableId)
+    {
+        return await _context.Orders
+            .Include(x => x.OrderItems)
+            .FirstOrDefaultAsync(x => x.TableId == tableId && x.Status == Domain.Enums.OrderStatus.Pending);
+    }
+
     public async Task AddAsync(Order order)
     {
         await _context.Orders.AddAsync(order);

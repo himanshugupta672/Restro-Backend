@@ -37,4 +37,10 @@ public class MenuItemService : IMenuItemService
     {
         await _repository.DeleteAsync(id);
     }
+    public async Task<IEnumerable<MenuItem>> GetMenuByCategory(int categoryId)
+    {
+        var allItems = await _repository.GetAllAsync();
+
+        return allItems.Where(x => x.CategoryId == categoryId && x.IsAvailable);
+    }
 }

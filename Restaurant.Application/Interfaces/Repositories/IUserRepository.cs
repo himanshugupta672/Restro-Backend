@@ -6,4 +6,5 @@
     Task AddAsync(User user);
     Task UpdateAsync(User user);
     Task<List<User>> GetAvailableChefsAsync();
+    Task<User?> GetByEmailAsync(string email);
 }

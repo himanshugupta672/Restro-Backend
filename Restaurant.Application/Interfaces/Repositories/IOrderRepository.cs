@@ -8,6 +8,8 @@ public interface IOrderRepository
 
     Task<Order?> GetByIdAsync(int id);
 
+    Task<Order?> GetPendingByTableIdAsync(int tableId);
+
     Task AddAsync(Order order);
 
     Task UpdateAsync(Order order);

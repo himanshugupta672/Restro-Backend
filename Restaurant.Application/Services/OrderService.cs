@@ -9,13 +9,16 @@ public class OrderService : IOrderService
 {
     private readonly IOrderRepository _repository;
     private readonly IUserRepository _userRepository;
+    private readonly IMenuItemRepository _menuRepository;
 
     public OrderService(
         IOrderRepository repository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IMenuItemRepository menuRepository)
     {
         _repository = repository;
         _userRepository = userRepository;
+        _menuRepository = menuRepository;
     }
 
     public async Task<List<Order>> GetAllAsync()
@@ -30,26 +33,48 @@ public class OrderService : IOrderService
 
     public async Task CreateAsync(Order order)
     {
-        var chefs = await _userRepository.GetAvailableChefsAsync();
-        var chef = chefs.FirstOrDefault();
+        var pendingOrder = await _repository.GetPendingByTableIdAsync(order.TableId);
+        var targetOrder = pendingOrder ?? order;
+        decimal total = 0;
 
-        if (chef != null)
+        foreach (var item in order.OrderItems)
         {
-            order.ChefId = chef.Id;
-            order.Status = OrderStatus.Assigned;
+            var menuItem = await _menuRepository.GetByIdAsync(item.MenuItemId);
 
-            chef.Status = UserStatus.Busy;
-            chef.LastAssignedAt = DateTime.Now;
-            await _userRepository.UpdateAsync(chef);
+            if (menuItem == null)
+                throw new Exception("Menu item not found");
+
+            var existingItem = targetOrder.OrderItems
+                .FirstOrDefault(x => x.MenuItemId == item.MenuItemId);
+
+            if (existingItem == null)
+            {
+                item.Price = menuItem.Price;
+                targetOrder.OrderItems.Add(item);
+            }
+            else
+            {
+                existingItem.Quantity += item.Quantity;
+                existingItem.Price = menuItem.Price;
+            }
+        }
+
+        total = targetOrder.OrderItems.Sum(item => item.Price * item.Quantity);
+
+        targetOrder.TotalAmount = total;
+        targetOrder.Status = OrderStatus.Pending;
+        targetOrder.ChefId = null;
+
+        if (pendingOrder == null)
+        {
+            targetOrder.CreatedAt = DateTime.UtcNow;
+            await _repository.AddAsync(targetOrder);
         }
         else
         {
-            order.Status = OrderStatus.Pending;
+            await _repository.UpdateAsync(targetOrder);
         }
-
-        await _repository.AddAsync(order);
     }
-
     public async Task UpdateAsync(Order order)
     {
         await _repository.UpdateAsync(order);
@@ -76,11 +101,32 @@ public class OrderService : IOrderService
     public async Task RejectOrder(int orderId, int chefId)
     {
         var order = await _repository.GetByIdAsync(orderId);
-
         if (order == null) return;
 
-        order.Status = OrderStatus.Pending;
-        order.ChefId = null;
+        var chef = await _userRepository.GetByIdAsync(chefId);
+        if (chef != null)
+        {
+            chef.Status = UserStatus.Available;
+            await _userRepository.UpdateAsync(chef);
+        }
+
+        var chefs = await _userRepository.GetAvailableChefsAsync();
+        var nextChef = chefs.FirstOrDefault();
+
+        if (nextChef != null)
+        {
+            order.ChefId = nextChef.Id;
+            order.Status = OrderStatus.Assigned;
+
+            nextChef.Status = UserStatus.Busy;
+            nextChef.LastAssignedAt = DateTime.UtcNow;
+            await _userRepository.UpdateAsync(nextChef);
+        }
+        else
+        {
+            order.Status = OrderStatus.Pending;
+            order.ChefId = null;
+        }
 
         await _repository.UpdateAsync(order);
     }

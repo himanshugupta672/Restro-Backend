@@ -1,6 +1,6 @@
 ﻿public enum UserRole
 {
-    SuperAdmin,
+    Admin,
     Chef,
     Customer
 }

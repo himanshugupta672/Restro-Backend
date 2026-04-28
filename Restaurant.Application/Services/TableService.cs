@@ -25,6 +25,7 @@ public class TableService : ITableService
 
     public async Task AddAsync(Table table)
     {
+        table.Token = Guid.NewGuid().ToString();
         await _repository.AddAsync(table);
     }
 
@@ -36,5 +37,11 @@ public class TableService : ITableService
     public async Task DeleteAsync(int id)
     {
         await _repository.DeleteAsync(id);
+    }
+    public async Task<Table?> GetByTokenAsync(string token)
+    {
+        var tables = await _repository.GetAllAsync();
+
+        return tables.FirstOrDefault(x => x.Token == token && x.IsActive);
     }
 }

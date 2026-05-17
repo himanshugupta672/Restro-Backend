@@ -21,6 +21,7 @@ public class RestaurantDbContext : DbContext
 
     public DbSet<Chef> Chefs { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,5 +42,15 @@ public class RestaurantDbContext : DbContext
         modelBuilder.Entity<Order>()
     .Property(o => o.Status)
     .HasConversion<string>();
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(x => x.User)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(x => x.TokenHash)
+            .IsUnique();
     }
 }

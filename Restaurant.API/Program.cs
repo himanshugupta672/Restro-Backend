@@ -8,6 +8,7 @@ using Restaurant.Application.Services;
 using Restaurant.Infrastructure.Data;
 using Restaurant.Infrastructure.Repositories;
 using Restaurant.Infrastructure.Services;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -54,7 +55,11 @@ builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IChefRepository, ChefRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddSingleton<ITokenBlacklistService, TokenBlacklistService>();
+builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
 // Services
 builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -84,6 +89,25 @@ builder.Services.AddAuthentication(options =>
 
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            if (context.SecurityToken is not JwtSecurityToken jwtToken)
+            {
+                return;
+            }
+
+            var tokenBlacklistService =
+                context.HttpContext.RequestServices.GetRequiredService<ITokenBlacklistService>();
+
+            if (await tokenBlacklistService.IsTokenBlacklistedAsync(jwtToken.RawData))
+            {
+                context.Fail("Token has been logged out.");
+            }
+        }
     };
 });
 

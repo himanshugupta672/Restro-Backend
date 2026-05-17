@@ -11,6 +11,8 @@ using System.Security.Claims;
 public class AuthController : ControllerBase
 {
     private const string RefreshTokenCookieName = "refreshToken";
+    private const string CsrfTokenCookieName = "csrfToken";
+    private const string CsrfTokenHeaderName = "X-CSRF-TOKEN";
 
     private readonly IUserRepository _userRepository;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
@@ -58,6 +60,7 @@ public class AuthController : ControllerBase
         var refreshToken = await CreateRefreshTokenAsync(user.Id);
 
         SetRefreshTokenCookie(refreshToken);
+        SetCsrfTokenCookie();
 
         return Ok(new
         {
@@ -71,6 +74,11 @@ public class AuthController : ControllerBase
     [HttpPost("refresh-token")]
     public async Task<IActionResult> RefreshToken()
     {
+        if (!IsValidCsrfToken())
+        {
+            return Forbid();
+        }
+
         if (!Request.Cookies.TryGetValue(RefreshTokenCookieName, out var refreshToken) ||
             string.IsNullOrWhiteSpace(refreshToken))
         {
@@ -97,6 +105,7 @@ public class AuthController : ControllerBase
 
         await SaveRefreshTokenAsync(storedToken.UserId, newRefreshTokenHash);
         SetRefreshTokenCookie(newRefreshToken);
+        SetCsrfTokenCookie();
 
         var accessToken = _jwtService.GenerateToken(storedToken.User);
 
@@ -127,6 +136,7 @@ public class AuthController : ControllerBase
         await _tokenBlacklistService.BlacklistTokenAsync(accessToken, jwtToken.ValidTo);
         await RevokeRefreshTokenFromCookieAsync();
         ClearRefreshTokenCookie();
+        ClearCsrfTokenCookie();
 
         return Ok(new
         {
@@ -202,11 +212,51 @@ public class AuthController : ControllerBase
             GetRefreshTokenCookieOptions());
     }
 
+    private void SetCsrfTokenCookie()
+    {
+        Response.Cookies.Append(
+            CsrfTokenCookieName,
+            Guid.NewGuid().ToString("N"),
+            GetCsrfTokenCookieOptions());
+    }
+
+    private void ClearCsrfTokenCookie()
+    {
+        Response.Cookies.Delete(
+            CsrfTokenCookieName,
+            GetCsrfTokenCookieOptions());
+    }
+
+    private bool IsValidCsrfToken()
+    {
+        if (!Request.Cookies.TryGetValue(CsrfTokenCookieName, out var csrfCookie) ||
+            string.IsNullOrWhiteSpace(csrfCookie))
+        {
+            return false;
+        }
+
+        var csrfHeader = Request.Headers[CsrfTokenHeaderName].ToString();
+
+        return !string.IsNullOrWhiteSpace(csrfHeader) &&
+            string.Equals(csrfCookie, csrfHeader, StringComparison.Ordinal);
+    }
+
     private CookieOptions GetRefreshTokenCookieOptions()
     {
         return new CookieOptions
         {
             HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.None,
+            Expires = DateTimeOffset.UtcNow.AddDays(GetRefreshTokenDurationInDays())
+        };
+    }
+
+    private CookieOptions GetCsrfTokenCookieOptions()
+    {
+        return new CookieOptions
+        {
+            HttpOnly = false,
             Secure = true,
             SameSite = SameSiteMode.None,
             Expires = DateTimeOffset.UtcNow.AddDays(GetRefreshTokenDurationInDays())

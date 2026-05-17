@@ -17,14 +17,16 @@ public class UserController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get()
     {
-        return Ok(await _service.GetAllAsync());
+        var users = await _service.GetAllAsync();
+        return Ok(users.Select(ToResponseDto));
     }
 
     [Authorize(Roles = "Admin")]
     [HttpGet("chefs")]
     public async Task<IActionResult> GetChefs()
     {
-        return Ok(await _service.GetChefsAsync());
+        var chefs = await _service.GetChefsAsync();
+        return Ok(chefs.Select(ToResponseDto));
     }
 
     [Authorize(Roles = "Admin")]
@@ -48,5 +50,18 @@ public class UserController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+    }
+
+    private static UserResponseDto ToResponseDto(User user)
+    {
+        return new UserResponseDto
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Email = user.Email,
+            Role = user.Role.ToString(),
+            Status = user.Status.ToString(),
+            LastAssignedAt = user.LastAssignedAt
+        };
     }
 }

@@ -11,6 +11,20 @@ using Restaurant.Infrastructure.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+// Ganesh add this line of code _this for CORS to allow frontend to access backend
+//bcz cors missing tha .....frontend access nhi kr pa rha tha backend ko....cors ke bina frontend 
+//aur backend alag alag origin pe hote hain to browser security ke liye request ko block kar deta hai...isliye cors add krna padta hai taki frontend backend ko access kr sake
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+// Ganesh
 
 builder.Services.AddControllers();
 
@@ -96,6 +110,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();

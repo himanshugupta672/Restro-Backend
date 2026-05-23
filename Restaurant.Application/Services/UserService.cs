@@ -62,6 +62,9 @@ public class UserService : IUserService
     }
     public async Task RegisterChefAsync(CreateUserDto dto)
     {
+        if (dto.Password != dto.ConfirmPassword)
+            throw new Exception("Password and confirm password do not match");
+
         var existing = await _repository.GetByEmailAsync(dto.Email);
 
         if (existing != null)
@@ -71,7 +74,9 @@ public class UserService : IUserService
         {
             Name = dto.Name,
             Email = dto.Email,
+            PhoneNumber = NormalizeOptionalText(dto.PhoneNumber),
             Password = _passwordHashService.HashPassword(dto.Password),
+            Address = NormalizeOptionalText(dto.Address),
             Role = UserRole.Chef,
             Status = UserStatus.Available,
             LastAssignedAt = DateTime.UtcNow
@@ -82,11 +87,16 @@ public class UserService : IUserService
 
     public async Task CreateByAdminAsync(CreateUserDto dto)
     {
+        if (dto.Password != dto.ConfirmPassword)
+            throw new Exception("Password and confirm password do not match");
+
         var user = new User
         {
             Name = dto.Name,
             Email = dto.Email,
+            PhoneNumber = NormalizeOptionalText(dto.PhoneNumber),
             Password = _passwordHashService.HashPassword(dto.Password),
+            Address = NormalizeOptionalText(dto.Address),
 
             Role = (UserRole)dto.Role, // admin decides
             Status = UserStatus.Available,
@@ -94,5 +104,10 @@ public class UserService : IUserService
         };
 
         await _repository.AddAsync(user);
+    }
+
+    private static string? NormalizeOptionalText(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

@@ -52,6 +52,20 @@ public class UserController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var isDeleted = await _service.DeleteAsync(id);
+
+        if (!isDeleted)
+        {
+            return NotFound("User not found");
+        }
+
+        return Ok("User deleted successfully");
+    }
+
     private static UserResponseDto ToResponseDto(User user)
     {
         return new UserResponseDto

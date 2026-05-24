@@ -20,6 +20,7 @@ public class AuthController : ControllerBase
     private readonly ITokenBlacklistService _tokenBlacklistService;
     private readonly IPasswordHashService _passwordHashService;
     private readonly IRefreshTokenService _refreshTokenService;
+    private readonly IUserService _userService;
     private readonly IConfiguration _configuration;
 
     public AuthController(
@@ -29,6 +30,7 @@ public class AuthController : ControllerBase
         ITokenBlacklistService tokenBlacklistService,
         IPasswordHashService passwordHashService,
         IRefreshTokenService refreshTokenService,
+        IUserService userService,
         IConfiguration configuration)
     {
         _userRepository = userRepository;
@@ -37,6 +39,7 @@ public class AuthController : ControllerBase
         _tokenBlacklistService = tokenBlacklistService;
         _passwordHashService = passwordHashService;
         _refreshTokenService = refreshTokenService;
+        _userService = userService;
         _configuration = configuration;
     }
 
@@ -142,6 +145,27 @@ public class AuthController : ControllerBase
         {
             message = "Logged out successfully"
         });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordDto dto)
+    {
+        try
+        {
+            var isUpdated = await _userService.ResetPasswordAsync(dto);
+
+            if (!isUpdated)
+            {
+                return NotFound("User not found");
+            }
+
+            return Ok("Password updated successfully");
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [Authorize]

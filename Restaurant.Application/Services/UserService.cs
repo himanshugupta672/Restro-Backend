@@ -77,7 +77,7 @@ public class UserService : IUserService
             PhoneNumber = NormalizeOptionalText(dto.PhoneNumber),
             Password = _passwordHashService.HashPassword(dto.Password),
             Address = NormalizeOptionalText(dto.Address),
-            Role = UserRole.Chef,
+            Role = (UserRole)dto.Role,
             Status = UserStatus.Available,
             LastAssignedAt = DateTime.UtcNow
         };
@@ -104,6 +104,34 @@ public class UserService : IUserService
         };
 
         await _repository.AddAsync(user);
+    }
+
+    public async Task<bool> ResetPasswordAsync(ForgotPasswordDto dto)
+    {
+        if (dto.Password != dto.ConfirmPassword)
+            throw new Exception("Password and confirm password do not match");
+
+        var user = await _repository.GetByEmailAsync(dto.Email);
+
+        if (user == null)
+            return false;
+
+        user.Password = _passwordHashService.HashPassword(dto.Password);
+        await _repository.UpdateAsync(user);
+
+        return true;
+    }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var user = await _repository.GetByIdAsync(id);
+
+        if (user == null)
+            return false;
+
+        await _repository.DeleteAsync(user);
+
+        return true;
     }
 
     private static string? NormalizeOptionalText(string? value)

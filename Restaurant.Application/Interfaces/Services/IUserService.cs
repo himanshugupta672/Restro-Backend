@@ -11,6 +11,8 @@ public interface IUserService
 
     Task RegisterChefAsync(CreateUserDto dto);
     Task CreateByAdminAsync(CreateUserDto dto);
+    Task<bool> ResetPasswordAsync(ForgotPasswordDto dto);
+    Task<bool> DeleteAsync(int id);
 
     Task SetAvailable(int userId);
 

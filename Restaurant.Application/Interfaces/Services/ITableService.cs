@@ -10,4 +10,5 @@ public interface ITableService
     Task UpdateAsync(Table table);
     Task DeleteAsync(int id);
     Task<Table?> GetByTokenAsync(string token);
+    Task<Table?> GetByTableNumberAsync(int tableNumber);
 }

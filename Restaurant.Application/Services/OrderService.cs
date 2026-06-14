@@ -31,7 +31,7 @@ public class OrderService : IOrderService
         return await _repository.GetByIdAsync(id);
     }
 
-    public async Task CreateAsync(Order order)
+    public async Task<Order> CreateAsync(Order order)
     {
         var pendingOrder = await _repository.GetPendingByTableIdAsync(order.TableId);
         var targetOrder = pendingOrder ?? order;
@@ -74,6 +74,8 @@ public class OrderService : IOrderService
         {
             await _repository.UpdateAsync(targetOrder);
         }
+
+        return targetOrder;
     }
     public async Task UpdateAsync(Order order)
     {

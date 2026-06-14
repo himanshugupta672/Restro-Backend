@@ -8,7 +8,7 @@ public interface IOrderService
 
     Task<Order?> GetByIdAsync(int id);
 
-    Task CreateAsync(Order order);
+    Task<Order> CreateAsync(Order order);
 
     Task UpdateAsync(Order order);
     Task<List<Order>> GetByTableId(int tableId);

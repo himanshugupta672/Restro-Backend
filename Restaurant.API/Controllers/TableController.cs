@@ -25,6 +25,29 @@ public class TableController : ControllerBase
         return Ok(data);
     }
 
+    [AllowAnonymous]
+    [HttpGet("session")]
+    public async Task<IActionResult> GetSession(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return BadRequest("Table token is required.");
+        }
+
+        var table = await _service.GetByTokenAsync(token);
+
+        if (table == null)
+        {
+            return NotFound("The table session is invalid or inactive.");
+        }
+
+        return Ok(new
+        {
+            tableId = table.Id,
+            tableNumber = table.TableNumber
+        });
+    }
+
     [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<IActionResult> Create(CreateTableDto dto)

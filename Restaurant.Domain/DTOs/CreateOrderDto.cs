@@ -1,5 +1,6 @@
 ﻿public class CreateOrderDto
 {
+    public int TableNumber { get; set; }
     public List<OrderItemDto> Items { get; set; }
 }
 

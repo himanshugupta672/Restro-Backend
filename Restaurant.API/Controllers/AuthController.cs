@@ -69,7 +69,7 @@ public class AuthController : ControllerBase
         {
             accessToken,
             token = accessToken,
-            role = user.Role,
+            role = user.Role.ToString(),
             userId = user.Id
         });
     }
@@ -116,7 +116,7 @@ public class AuthController : ControllerBase
         {
             accessToken,
             token = accessToken,
-            role = storedToken.User.Role,
+            role = storedToken.User.Role.ToString(),
             userId = storedToken.User.Id
         });
     }

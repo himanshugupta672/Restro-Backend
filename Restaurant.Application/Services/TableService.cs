@@ -44,4 +44,11 @@ public class TableService : ITableService
 
         return tables.FirstOrDefault(x => x.Token == token && x.IsActive);
     }
+
+    public async Task<Table?> GetByTableNumberAsync(int tableNumber)
+    {
+        var tables = await _repository.GetAllAsync();
+
+        return tables.FirstOrDefault(x => x.TableNumber == tableNumber && x.IsActive);
+    }
 }

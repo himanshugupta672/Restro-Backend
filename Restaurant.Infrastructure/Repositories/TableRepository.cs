@@ -23,20 +23,23 @@ namespace Restaurant.Infrastructure.Repositories
         public async Task DeleteAsync(int id)
         {
             var table = await _context.Tables.FindAsync(id);
-            if (table == null) { 
-             _context.Tables.Remove(table);
-              await _context.SaveChangesAsync();
+            if (table != null)
+            {
+                _context.Tables.Remove(table);
+                await _context.SaveChangesAsync();
             }
         }
 
         public async Task<IEnumerable<Table>> GetAllAsync()
         {
-            return await _context.Tables.ToListAsync();
+            return await _context.Tables.AsNoTracking().ToListAsync();
         }
 
-        public async Task<Table> GetByIdAsync(int id)
+        public async Task<Table?> GetByIdAsync(int id)
         {
-            return await _context.Tables.FindAsync(id);
+            return await _context.Tables
+                .AsNoTracking()
+                .FirstOrDefaultAsync(table => table.Id == id);
         }
 
         public async Task UpdateAsync(Table table)

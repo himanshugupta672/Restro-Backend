@@ -49,37 +49,44 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request)
     {
-        var user = await _userRepository.GetByEmailAsync(request.Email);
-
-        if (user == null || !_passwordHashService.VerifyPassword(request.Password, user.Password))
+        try
         {
-            return Unauthorized();
+            var user = await _userRepository.GetByEmailAsync(request.Email);
+
+            if (user == null || !_passwordHashService.VerifyPassword(request.Password, user.Password))
+            {
+                return Unauthorized();
+            }
+
+            if (!user.IsActive)
+            {
+                return Unauthorized("Your account has been deactivated.");
+            }
+
+            if (!_passwordHashService.IsPasswordHash(user.Password))
+            {
+                user.Password = _passwordHashService.HashPassword(request.Password);
+                await _userRepository.UpdateAsync(user);
+            }
+
+            var accessToken = _jwtService.GenerateToken(user);
+            var refreshToken = await CreateRefreshTokenAsync(user.Id);
+
+            SetRefreshTokenCookie(refreshToken);
+            SetCsrfTokenCookie();
+
+            return Ok(new
+            {
+                accessToken,
+                token = accessToken,
+                role = user.Role.ToString(),
+                userId = user.Id
+            });
         }
-
-        if (!user.IsActive)
+         catch (Exception ex)
         {
-            return Unauthorized("Your account has been deactivated.");
+            return StatusCode(500, ex.ToString());
         }
-
-        if (!_passwordHashService.IsPasswordHash(user.Password))
-        {
-            user.Password = _passwordHashService.HashPassword(request.Password);
-            await _userRepository.UpdateAsync(user);
-        }
-
-        var accessToken = _jwtService.GenerateToken(user);
-        var refreshToken = await CreateRefreshTokenAsync(user.Id);
-
-        SetRefreshTokenCookie(refreshToken);
-        SetCsrfTokenCookie();
-
-        return Ok(new
-        {
-            accessToken,
-            token = accessToken,
-            role = user.Role.ToString(),
-            userId = user.Id
-        });
     }
 
     [HttpPost("refresh-token")]

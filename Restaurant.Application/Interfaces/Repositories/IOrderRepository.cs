@@ -1,4 +1,4 @@
-﻿using Restaurant.Domain.Entities;
+using Restaurant.Domain.Entities;
 
 namespace Restaurant.Application.Interfaces.Repositories;
 
@@ -13,4 +13,6 @@ public interface IOrderRepository
     Task AddAsync(Order order);
 
     Task UpdateAsync(Order order);
+
+    Task<List<Order>> GetByCustomerIdAsync(int customerId);
 }

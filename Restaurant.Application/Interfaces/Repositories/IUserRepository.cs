@@ -1,4 +1,4 @@
-﻿public interface IUserRepository
+public interface IUserRepository
 {
     Task<List<User>> GetAllAsync();
     Task<User?> GetByIdAsync(int id);
@@ -8,4 +8,6 @@
     Task DeleteAsync(User user);
     Task<List<User>> GetAvailableChefsAsync();
     Task<User?> GetByEmailAsync(string email);
+    Task<List<User>> GetCustomersAsync();
+    Task<User?> GetByPhoneAsync(string phone);
 }

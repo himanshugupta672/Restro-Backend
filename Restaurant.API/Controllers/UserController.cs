@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Restaurant.Application.DTOs;
 
@@ -43,6 +43,8 @@ public class UserController : ControllerBase
     {
         try
         {
+            // Security override: self-registered users are always created as a Chef
+            dto.Role = (int)UserRole.Chef;
             await _service.RegisterChefAsync(dto);
             return Ok("Chef registered successfully");
         }
@@ -50,6 +52,45 @@ public class UserController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, UpdateUserDto dto)
+    {
+        try
+        {
+            var updated = await _service.UpdateAsync(id, dto);
+            if (!updated)
+            {
+                return NotFound("User not found");
+            }
+            return Ok("User updated successfully");
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("customers")]
+    public async Task<IActionResult> GetCustomers()
+    {
+        var details = await _service.GetCustomerDetailsAsync();
+        return Ok(details);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id:int}/toggle-active")]
+    public async Task<IActionResult> ToggleActive(int id)
+    {
+        var result = await _service.ToggleUserActiveStatusAsync(id);
+        if (!result)
+        {
+            return NotFound("User not found");
+        }
+        return Ok("Active status toggled successfully");
     }
 
     [Authorize(Roles = "Admin")]

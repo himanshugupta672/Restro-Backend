@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Domain.Entities;
 using Restaurant.Infrastructure.Data;
@@ -45,5 +45,13 @@ public class OrderRepository : IOrderRepository
     {
         _context.Orders.Update(order);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<Order>> GetByCustomerIdAsync(int customerId)
+    {
+        return await _context.Orders
+            .Include(x => x.OrderItems)
+            .Where(x => x.CustomerId == customerId)
+            .ToListAsync();
     }
 }

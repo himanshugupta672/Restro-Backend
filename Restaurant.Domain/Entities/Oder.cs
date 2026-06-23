@@ -1,4 +1,4 @@
-﻿using Restaurant.Domain.Enums;
+using Restaurant.Domain.Enums;
 
 namespace Restaurant.Domain.Entities;
 
@@ -15,6 +15,9 @@ public class Order
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     public decimal TotalAmount { get; set; }
+
+    public int? CustomerId { get; set; }
+    public User? Customer { get; set; }
 
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 }

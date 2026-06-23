@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Domain.Entities;
 using Restaurant.Domain.Enums;
@@ -61,5 +61,18 @@ public class UserRepository : IUserRepository
     {
         return await _context.Users
             .FirstOrDefaultAsync(x => x.Email == email);
+    }
+
+    public async Task<List<User>> GetCustomersAsync()
+    {
+        return await _context.Users
+            .Where(x => x.Role == UserRole.Customer)
+            .ToListAsync();
+    }
+
+    public async Task<User?> GetByPhoneAsync(string phone)
+    {
+        return await _context.Users
+            .FirstOrDefaultAsync(x => x.PhoneNumber == phone);
     }
 }

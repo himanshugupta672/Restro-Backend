@@ -10,6 +10,9 @@ using System.Security.Claims;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Otp, DateTime ExpiresAt)> OtpCache = 
+        new System.Collections.Concurrent.ConcurrentDictionary<string, (string Otp, DateTime ExpiresAt)>();
+
     private const string RefreshTokenCookieName = "refreshToken";
     private const string CsrfTokenCookieName = "csrfToken";
     private const string CsrfTokenHeaderName = "X-CSRF-TOKEN";
@@ -51,6 +54,11 @@ public class AuthController : ControllerBase
         if (user == null || !_passwordHashService.VerifyPassword(request.Password, user.Password))
         {
             return Unauthorized();
+        }
+
+        if (!user.IsActive)
+        {
+            return Unauthorized("Your account has been deactivated.");
         }
 
         if (!_passwordHashService.IsPasswordHash(user.Password))
@@ -166,6 +174,136 @@ public class AuthController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("customer/register")]
+    public async Task<IActionResult> RegisterCustomer(CustomerRegisterDto dto)
+    {
+        try
+        {
+            var user = await _userService.RegisterCustomerAsync(dto);
+
+            var accessToken = _jwtService.GenerateToken(user);
+            var refreshToken = await CreateRefreshTokenAsync(user.Id);
+
+            SetRefreshTokenCookie(refreshToken);
+            SetCsrfTokenCookie();
+
+            return Ok(new
+            {
+                accessToken,
+                token = accessToken,
+                role = user.Role.ToString(),
+                userId = user.Id
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("otp/send")]
+    public async Task<IActionResult> SendOtp(SendOtpRequestDto dto)
+    {
+        string? identifier = !string.IsNullOrWhiteSpace(dto.Email) ? dto.Email.Trim().ToLower() : dto.PhoneNumber?.Trim();
+        if (string.IsNullOrEmpty(identifier))
+        {
+            return BadRequest("Email or Phone Number is required.");
+        }
+
+        User? user = null;
+        if (!string.IsNullOrWhiteSpace(dto.Email))
+        {
+            user = await _userRepository.GetByEmailAsync(dto.Email);
+        }
+        else if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
+        {
+            user = await _userRepository.GetByPhoneAsync(dto.PhoneNumber);
+        }
+
+        if (user == null)
+        {
+            return NotFound("User not registered. Please register first.");
+        }
+
+        if (!user.IsActive)
+        {
+            return Unauthorized("Your account has been deactivated.");
+        }
+
+        var random = new Random();
+        var otp = random.Next(100000, 999999).ToString();
+        var expiresAt = DateTime.UtcNow.AddMinutes(5);
+
+        OtpCache[identifier] = (otp, expiresAt);
+
+        Console.WriteLine($"[DEMO OTP] Sent verification code {otp} to {identifier}");
+
+        return Ok(new
+        {
+            message = $"OTP sent successfully (for testing, code is: {otp})",
+            otp = otp
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("otp/verify")]
+    public async Task<IActionResult> VerifyOtp(VerifyOtpRequestDto dto)
+    {
+        string? identifier = !string.IsNullOrWhiteSpace(dto.Email) ? dto.Email.Trim().ToLower() : dto.PhoneNumber?.Trim();
+        if (string.IsNullOrEmpty(identifier))
+        {
+            return BadRequest("Email or Phone Number is required.");
+        }
+
+        if (!OtpCache.TryGetValue(identifier, out var cachedData) || cachedData.ExpiresAt < DateTime.UtcNow)
+        {
+            return BadRequest("OTP has expired or was not requested.");
+        }
+
+        if (cachedData.Otp != dto.Otp)
+        {
+            return BadRequest("Invalid OTP verification code.");
+        }
+
+        OtpCache.TryRemove(identifier, out _);
+
+        User? user = null;
+        if (!string.IsNullOrWhiteSpace(dto.Email))
+        {
+            user = await _userRepository.GetByEmailAsync(dto.Email);
+        }
+        else if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
+        {
+            user = await _userRepository.GetByPhoneAsync(dto.PhoneNumber);
+        }
+
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        if (!user.IsActive)
+        {
+            return Unauthorized("Your account has been deactivated.");
+        }
+
+        var accessToken = _jwtService.GenerateToken(user);
+        var refreshToken = await CreateRefreshTokenAsync(user.Id);
+
+        SetRefreshTokenCookie(refreshToken);
+        SetCsrfTokenCookie();
+
+        return Ok(new
+        {
+            accessToken,
+            token = accessToken,
+            role = user.Role.ToString(),
+            userId = user.Id
+        });
     }
 
     [Authorize]

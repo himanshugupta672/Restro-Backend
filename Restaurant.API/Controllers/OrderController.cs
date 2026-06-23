@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Services;
@@ -69,9 +69,17 @@ public class OrderController : ControllerBase
         if (table == null)
             return BadRequest("Invalid or inactive table number.");
 
+        int? customerId = null;
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var parsedId))
+        {
+            customerId = parsedId;
+        }
+
         var order = new Order
         {
             TableId = table.Id,
+            CustomerId = customerId,
             Status = OrderStatus.Pending,
             OrderItems = dto.Items.Select(x => new OrderItem
             {

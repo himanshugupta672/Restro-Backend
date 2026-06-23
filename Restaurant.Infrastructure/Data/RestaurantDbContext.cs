@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Restaurant.Domain.Entities;
 
 namespace Restaurant.Infrastructure.Data;
@@ -52,5 +52,11 @@ public class RestaurantDbContext : DbContext
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(x => x.TokenHash)
             .IsUnique();
+
+        modelBuilder.Entity<Order>()
+            .HasOne(x => x.Customer)
+            .WithMany()
+            .HasForeignKey(x => x.CustomerId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

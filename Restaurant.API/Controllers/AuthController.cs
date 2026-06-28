@@ -387,10 +387,12 @@ public class AuthController : ControllerBase
 
     private void SetCsrfTokenCookie()
     {
+        var csrfToken = Guid.NewGuid().ToString("N");
         Response.Cookies.Append(
             CsrfTokenCookieName,
-            Guid.NewGuid().ToString("N"),
+            csrfToken,
             GetCsrfTokenCookieOptions());
+        Response.Headers["X-CSRF-Token"] = csrfToken;
     }
 
     private void ClearCsrfTokenCookie()

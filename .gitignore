@@ -5,3 +5,5 @@ obj/
 *.suo
 *.log
 appsettings.Development.json
+config.bat
+node_modules

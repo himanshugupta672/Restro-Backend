@@ -34,7 +34,8 @@ builder.Services.AddCors(options =>
             .WithOrigins(frontendOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowCredentials()
+            .WithExposedHeaders("X-CSRF-Token");
     });
 });
 

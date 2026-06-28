@@ -12,5 +12,7 @@ public class UserResponseDto
 
     public string Status { get; set; } = string.Empty;
 
+    public bool IsActive { get; set; }
+
     public DateTime? LastAssignedAt { get; set; }
 }

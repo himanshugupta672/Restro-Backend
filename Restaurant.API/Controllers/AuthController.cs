@@ -4,6 +4,7 @@ using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Cryptography;
 using System.Security.Claims;
 
 [ApiController]
@@ -25,6 +26,7 @@ public class AuthController : ControllerBase
     private readonly IRefreshTokenService _refreshTokenService;
     private readonly IUserService _userService;
     private readonly IConfiguration _configuration;
+    private readonly IWebHostEnvironment _environment;
 
     public AuthController(
         IUserRepository userRepository,
@@ -34,7 +36,8 @@ public class AuthController : ControllerBase
         IPasswordHashService passwordHashService,
         IRefreshTokenService refreshTokenService,
         IUserService userService,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IWebHostEnvironment environment)
     {
         _userRepository = userRepository;
         _refreshTokenRepository = refreshTokenRepository;
@@ -44,6 +47,7 @@ public class AuthController : ControllerBase
         _refreshTokenService = refreshTokenService;
         _userService = userService;
         _configuration = configuration;
+        _environment = environment;
     }
 
     [HttpPost("login")]
@@ -168,6 +172,12 @@ public class AuthController : ControllerBase
     {
         try
         {
+            var identifier = NormalizeIdentifier(dto.Email, null);
+            if (string.IsNullOrWhiteSpace(dto.Otp) || !ConsumeOtp(identifier, dto.Otp))
+            {
+                return BadRequest("OTP verification is required before resetting the password.");
+            }
+
             var isUpdated = await _userService.ResetPasswordAsync(dto);
 
             if (!isUpdated)
@@ -241,18 +251,19 @@ public class AuthController : ControllerBase
             return Unauthorized("Your account has been deactivated.");
         }
 
-        var random = new Random();
-        var otp = random.Next(100000, 999999).ToString();
+        var otp = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
         var expiresAt = DateTime.UtcNow.AddMinutes(5);
 
         OtpCache[identifier] = (otp, expiresAt);
 
-        Console.WriteLine($"[DEMO OTP] Sent verification code {otp} to {identifier}");
+        if (_environment.IsDevelopment())
+        {
+            Console.WriteLine($"[DEV OTP] Verification code generated for {identifier}.");
+        }
 
         return Ok(new
         {
-            message = $"OTP sent successfully (for testing, code is: {otp})",
-            otp = otp
+            message = "OTP sent successfully."
         });
     }
 
@@ -266,17 +277,10 @@ public class AuthController : ControllerBase
             return BadRequest("Email or Phone Number is required.");
         }
 
-        if (!OtpCache.TryGetValue(identifier, out var cachedData) || cachedData.ExpiresAt < DateTime.UtcNow)
+        if (!ConsumeOtp(identifier, dto.Otp))
         {
-            return BadRequest("OTP has expired or was not requested.");
+            return BadRequest("OTP has expired or is invalid.");
         }
-
-        if (cachedData.Otp != dto.Otp)
-        {
-            return BadRequest("Invalid OTP verification code.");
-        }
-
-        OtpCache.TryRemove(identifier, out _);
 
         User? user = null;
         if (!string.IsNullOrWhiteSpace(dto.Email))
@@ -437,5 +441,32 @@ public class AuthController : ControllerBase
         return int.TryParse(_configuration["Jwt:RefreshTokenDurationInDays"], out var days)
             ? days
             : 7;
+    }
+
+    private static string? NormalizeIdentifier(string? email, string? phoneNumber)
+    {
+        return !string.IsNullOrWhiteSpace(email)
+            ? email.Trim().ToLowerInvariant()
+            : phoneNumber?.Trim();
+    }
+
+    private static bool ConsumeOtp(string? identifier, string? otp)
+    {
+        if (string.IsNullOrWhiteSpace(identifier) || string.IsNullOrWhiteSpace(otp))
+        {
+            return false;
+        }
+
+        if (!OtpCache.TryGetValue(identifier, out var cachedData) ||
+            cachedData.ExpiresAt < DateTime.UtcNow ||
+            !CryptographicOperations.FixedTimeEquals(
+                System.Text.Encoding.UTF8.GetBytes(cachedData.Otp),
+                System.Text.Encoding.UTF8.GetBytes(otp)))
+        {
+            return false;
+        }
+
+        OtpCache.TryRemove(identifier, out _);
+        return true;
     }
 }

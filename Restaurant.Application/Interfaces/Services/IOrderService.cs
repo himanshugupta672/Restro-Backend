@@ -1,4 +1,5 @@
-﻿using Restaurant.Domain.Entities;
+using Restaurant.Domain.Entities;
+using Restaurant.Domain.Enums;
 
 namespace Restaurant.Application.Interfaces.Services;
 
@@ -11,7 +12,11 @@ public interface IOrderService
     Task<Order> CreateAsync(Order order);
 
     Task UpdateAsync(Order order);
+
+    Task<Order> UpdateStatusAndChefAsync(int orderId, OrderStatus status, int? chefId);
+
     Task<List<Order>> GetByTableId(int tableId);
+
     Task AcceptOrder(int orderId, int chefId);
 
     Task RejectOrder(int orderId, int chefId);

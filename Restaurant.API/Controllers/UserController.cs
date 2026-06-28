@@ -30,6 +30,14 @@ public class UserController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    [HttpGet("chefs/available")]
+    public async Task<IActionResult> GetAvailableChefs()
+    {
+        var chefs = await _service.GetAvailableChefsAsync();
+        return Ok(chefs.Select(ToResponseDto));
+    }
+
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<IActionResult> Create(CreateUserDto dto)
     {
@@ -116,6 +124,7 @@ public class UserController : ControllerBase
             Email = user.Email,
             Role = user.Role.ToString(),
             Status = user.Status.ToString(),
+            IsActive = user.IsActive,
             LastAssignedAt = user.LastAssignedAt
         };
     }

@@ -5,7 +5,8 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Jwt__Key": "LocalDevelopmentJwtSigningKeyForRestaurantApiOnly2026"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5151"
@@ -15,7 +16,8 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Jwt__Key": "LocalDevelopmentJwtSigningKeyForRestaurantApiOnly2026"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:7197;http://localhost:5151"
@@ -25,7 +27,8 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Jwt__Key": "LocalDevelopmentJwtSigningKeyForRestaurantApiOnly2026"
       }
     }
   },

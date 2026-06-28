@@ -32,6 +32,15 @@ public class UserService : IUserService
         return await _repository.GetChefsAsync();
     }
 
+    public async Task<List<User>> GetAvailableChefsAsync()
+    {
+        var chefs = await _repository.GetAvailableChefsAsync();
+
+        return chefs
+            .Where(x => x.IsActive)
+            .ToList();
+    }
+
     public async Task SetAvailable(int userId)
     {
         var user = await _repository.GetByIdAsync(userId);
@@ -69,6 +78,8 @@ public class UserService : IUserService
         if (dto.Password != dto.ConfirmPassword)
             throw new Exception("Password and confirm password do not match");
 
+        ValidateRole(dto.Role);
+
         var existing = await _repository.GetByEmailAsync(dto.Email);
 
         if (existing != null)
@@ -93,6 +104,19 @@ public class UserService : IUserService
     {
         if (dto.Password != dto.ConfirmPassword)
             throw new Exception("Password and confirm password do not match");
+
+        ValidateRole(dto.Role);
+
+        var existing = await _repository.GetByEmailAsync(dto.Email);
+        if (existing != null)
+            throw new Exception("Email is already in use");
+
+        if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
+        {
+            var existingPhone = await _repository.GetByPhoneAsync(dto.PhoneNumber);
+            if (existingPhone != null)
+                throw new Exception("Phone number is already in use");
+        }
 
         var user = new User
         {
@@ -119,6 +143,15 @@ public class UserService : IUserService
         var existing = await _repository.GetByEmailAsync(dto.Email);
         if (existing != null && existing.Id != id)
             throw new Exception("Email is already in use by another user");
+
+        ValidateRole(dto.Role);
+
+        if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
+        {
+            var existingPhone = await _repository.GetByPhoneAsync(dto.PhoneNumber);
+            if (existingPhone != null && existingPhone.Id != id)
+                throw new Exception("Phone number is already in use by another user");
+        }
 
         user.Name = dto.Name;
         user.Email = dto.Email;
@@ -240,5 +273,13 @@ public class UserService : IUserService
     private static string? NormalizeOptionalText(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static void ValidateRole(int role)
+    {
+        if (!Enum.IsDefined(typeof(UserRole), role))
+        {
+            throw new Exception("Invalid user role");
+        }
     }
 }

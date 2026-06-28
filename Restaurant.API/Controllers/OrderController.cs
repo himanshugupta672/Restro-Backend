@@ -4,6 +4,7 @@ using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
 using Restaurant.Domain.Enums;
+using System.Security.Claims;
 
 namespace Restaurant.API.Controllers;
 
@@ -70,8 +71,12 @@ public class OrderController : ControllerBase
             return BadRequest("Invalid or inactive table number.");
 
         int? customerId = null;
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var parsedId))
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (User.Identity?.IsAuthenticated == true &&
+            roleClaim == UserRole.Customer.ToString() &&
+            !string.IsNullOrEmpty(userIdClaim) &&
+            int.TryParse(userIdClaim, out var parsedId))
         {
             customerId = parsedId;
         }
@@ -88,7 +93,15 @@ public class OrderController : ControllerBase
             }).ToList()
         };
 
-        var savedOrder = await _service.CreateAsync(order);
+        Order savedOrder;
+        try
+        {
+            savedOrder = await _service.CreateAsync(order);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
         return Ok(await ToCustomerResponse(savedOrder, table.TableNumber));
     }
@@ -119,13 +132,53 @@ public class OrderController : ControllerBase
 
     [Authorize(Roles = "Admin,Chef")]
     [HttpPut("{id}/status")]
-    public async Task<IActionResult> UpdateStatus(int id, OrderStatus status)
+    public async Task<IActionResult> UpdateStatus(
+        int id,
+        [FromBody] UpdateOrderDto? dto,
+        [FromQuery] OrderStatus? status)
     {
         var order = await _service.GetByIdAsync(id);
         if (order == null) return NotFound();
 
-        order.Status = status;
+        var requestedStatus = dto?.Status ?? status;
+        if (requestedStatus == null)
+        {
+            return BadRequest("Order status is required.");
+        }
 
+        if (!IsValidStatusTransition(order.Status, requestedStatus.Value))
+        {
+            return BadRequest($"Cannot change order status from {order.Status} to {requestedStatus.Value}.");
+        }
+
+        if (User.IsInRole(UserRole.Chef.ToString()))
+        {
+            var chefIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(chefIdClaim, out var chefId) || order.ChefId != chefId)
+            {
+                return Forbid();
+            }
+        }
+
+        if (User.IsInRole(UserRole.Admin.ToString()))
+        {
+            try
+            {
+                await _service.UpdateStatusAndChefAsync(id, requestedStatus.Value, dto?.ChefId);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
+
+            return Ok("Order updated");
+        }
+
+        order.Status = requestedStatus.Value;
         await _service.UpdateAsync(order);
 
         return Ok("Status updated");
@@ -184,6 +237,26 @@ public class OrderController : ControllerBase
             order.CreatedAt,
             order.TotalAmount,
             order.OrderItems
+        };
+    }
+
+    private static bool IsValidStatusTransition(OrderStatus current, OrderStatus next)
+    {
+        if (current == next)
+        {
+            return true;
+        }
+
+        return current switch
+        {
+            OrderStatus.Pending => next is OrderStatus.Assigned or OrderStatus.Accepted or OrderStatus.Cancelled,
+            OrderStatus.Assigned => next is OrderStatus.Accepted or OrderStatus.Pending or OrderStatus.Cancelled,
+            OrderStatus.Accepted => next is OrderStatus.Assigned or OrderStatus.Preparing or OrderStatus.Cancelled,
+            OrderStatus.Preparing => next is OrderStatus.Ready or OrderStatus.Cancelled,
+            OrderStatus.Ready => next is OrderStatus.Completed,
+            OrderStatus.Completed => false,
+            OrderStatus.Cancelled => false,
+            _ => false
         };
     }
 }

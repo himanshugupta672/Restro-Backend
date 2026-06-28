@@ -47,6 +47,11 @@ public class ChefService : IChefService
             .ToList();
     }
 
+    public async Task<Order?> GetOrderByIdAsync(int orderId)
+    {
+        return await _orderRepository.GetByIdAsync(orderId);
+    }
+
     public async Task UpdateOrderStatus(int orderId, OrderStatus status)
     {
         var order = await _orderRepository.GetByIdAsync(orderId);

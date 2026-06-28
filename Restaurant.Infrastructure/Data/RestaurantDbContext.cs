@@ -5,7 +5,7 @@ namespace Restaurant.Infrastructure.Data;
 
 public class RestaurantDbContext : DbContext
 {
-    public RestaurantDbContext(DbContextOptions options) : base(options)
+    public RestaurantDbContext(DbContextOptions<RestaurantDbContext> options) : base(options)
     {
     }
 
@@ -53,10 +53,68 @@ public class RestaurantDbContext : DbContext
             .HasIndex(x => x.TokenHash)
             .IsUnique();
 
+        modelBuilder.Entity<User>()
+            .Property(x => x.Email)
+            .HasMaxLength(256);
+
+        modelBuilder.Entity<User>()
+            .Property(x => x.PhoneNumber)
+            .HasMaxLength(32);
+
+        modelBuilder.Entity<Table>()
+            .Property(x => x.Token)
+            .HasMaxLength(450);
+
+        modelBuilder.Entity<User>()
+            .HasIndex(x => x.Email)
+            .IsUnique();
+
+        modelBuilder.Entity<User>()
+            .HasIndex(x => x.PhoneNumber)
+            .IsUnique()
+            .HasFilter("[PhoneNumber] IS NOT NULL");
+
+        modelBuilder.Entity<Table>()
+            .HasIndex(x => x.TableNumber)
+            .IsUnique();
+
+        modelBuilder.Entity<Table>()
+            .HasIndex(x => x.Token)
+            .IsUnique();
+
+        modelBuilder.Entity<MenuItem>()
+            .HasIndex(x => x.CategoryId);
+
+        modelBuilder.Entity<Order>()
+            .HasIndex(x => x.TableId);
+
+        modelBuilder.Entity<Order>()
+            .HasIndex(x => x.ChefId);
+
         modelBuilder.Entity<Order>()
             .HasOne(x => x.Customer)
             .WithMany()
             .HasForeignKey(x => x.CustomerId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Chef>()
+            .Property(x => x.Name)
+            .HasMaxLength(150);
+
+        modelBuilder.Entity<Chef>()
+            .Property(x => x.PhoneNumber)
+            .HasMaxLength(32);
+
+        modelBuilder.Entity<Chef>()
+            .Property(x => x.Email)
+            .HasMaxLength(256);
+
+        modelBuilder.Entity<Chef>()
+            .HasIndex(x => x.Email)
+            .IsUnique();
+
+        modelBuilder.Entity<Chef>()
+            .HasIndex(x => x.PhoneNumber)
+            .IsUnique();
     }
 }

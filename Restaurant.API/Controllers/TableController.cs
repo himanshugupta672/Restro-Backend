@@ -65,6 +65,25 @@ public class TableController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, CreateTableDto dto)
+    {
+        var table = await _service.GetByIdAsync(id);
+
+        if (table == null)
+        {
+            return NotFound("Table not found");
+        }
+
+        table.TableNumber = dto.TableNumber;
+        table.IsActive = dto.IsActive;
+
+        await _service.UpdateAsync(table);
+
+        return Ok(table);
+    }
+
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

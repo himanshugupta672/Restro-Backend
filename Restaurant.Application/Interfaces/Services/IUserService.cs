@@ -9,6 +9,8 @@ public interface IUserService
 
     Task<List<User>> GetChefsAsync();
 
+    Task<List<User>> GetAvailableChefsAsync();
+
     Task RegisterChefAsync(CreateUserDto dto);
     Task CreateByAdminAsync(CreateUserDto dto);
     Task<bool> UpdateAsync(int id, UpdateUserDto dto);

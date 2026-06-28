@@ -19,5 +19,9 @@ public class Order
     public int? CustomerId { get; set; }
     public User? Customer { get; set; }
 
+    public string? SpecialInstructions { get; set; }
+
+    public int? EstimatedReadyMinutes { get; set; }
+
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 }

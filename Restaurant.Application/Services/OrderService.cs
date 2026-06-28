@@ -1,4 +1,4 @@
-﻿using Restaurant.Application.Interfaces.Repositories;
+using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
 using Restaurant.Domain.Enums;
@@ -39,6 +39,7 @@ public class OrderService : IOrderService
         }
 
         var validatedItems = new List<OrderItem>();
+        int maxPrepTime = 0;
 
         foreach (var item in order.OrderItems)
         {
@@ -55,6 +56,11 @@ public class OrderService : IOrderService
             if (!menuItem.IsAvailable)
             {
                 throw new ArgumentException($"{menuItem.Name} is not available.");
+            }
+
+            if (menuItem.PrepTimeMinutes > maxPrepTime)
+            {
+                maxPrepTime = menuItem.PrepTimeMinutes;
             }
 
             var existingItem = validatedItems.FirstOrDefault(x => x.MenuItemId == item.MenuItemId);
@@ -74,6 +80,7 @@ public class OrderService : IOrderService
 
         order.OrderItems = validatedItems;
         order.TotalAmount = order.OrderItems.Sum(item => item.Price * item.Quantity);
+        order.EstimatedReadyMinutes = maxPrepTime > 0 ? maxPrepTime : null;
         order.Status = OrderStatus.Pending;
         order.ChefId = null;
         order.CreatedAt = DateTime.UtcNow;
@@ -165,6 +172,11 @@ public class OrderService : IOrderService
         return orders
             .Where(x => x.TableId == tableId)
             .ToList();
+    }
+
+    public async Task<List<Order>> GetByCustomerIdAsync(int customerId)
+    {
+        return await _repository.GetByCustomerIdAsync(customerId);
     }
     public async Task AcceptOrder(int orderId, int chefId)
     {

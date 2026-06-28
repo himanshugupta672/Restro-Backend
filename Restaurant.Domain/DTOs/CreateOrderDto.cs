@@ -8,6 +8,8 @@ public class CreateOrderDto
     [Required]
     [MinLength(1)]
     public List<OrderItemDto> Items { get; set; } = new();
+
+    public string? SpecialInstructions { get; set; }
 }
 
 public class OrderItemDto

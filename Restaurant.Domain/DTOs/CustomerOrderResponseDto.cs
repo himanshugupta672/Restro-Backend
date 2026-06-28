@@ -16,6 +16,12 @@ public class CustomerOrderResponseDto
 
     public DateTime CreatedAt { get; set; }
 
+    public int? EstimatedTimeMinutes { get; set; }
+
+    public string? EstimatedReadyAt { get; set; }
+
+    public string? SpecialInstructions { get; set; }
+
     public List<CustomerOrderItemResponseDto> Items { get; set; } = [];
 }
 

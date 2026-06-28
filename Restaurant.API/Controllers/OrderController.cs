@@ -85,6 +85,7 @@ public class OrderController : ControllerBase
         {
             TableId = table.Id,
             CustomerId = customerId,
+            SpecialInstructions = dto.SpecialInstructions,
             Status = OrderStatus.Pending,
             OrderItems = dto.Items.Select(x => new OrderItem
             {
@@ -191,6 +192,28 @@ public class OrderController : ControllerBase
         return Ok(await _service.GetByTableId(tableId));
     }
 
+    [Authorize]
+    [HttpGet("my-orders")]
+    public async Task<IActionResult> GetMyOrders()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var customerId))
+        {
+            return Unauthorized();
+        }
+
+        var orders = await _service.GetByCustomerIdAsync(customerId);
+        var response = new List<CustomerOrderResponseDto>();
+
+        foreach (var order in orders.OrderByDescending(o => o.CreatedAt))
+        {
+            var table = await _tableService.GetByIdAsync(order.TableId);
+            response.Add(await ToCustomerResponse(order, table?.TableNumber ?? order.TableId));
+        }
+
+        return Ok(response);
+    }
+
     private async Task<CustomerOrderResponseDto> ToCustomerResponse(
         Order order,
         int tableNumber)
@@ -219,6 +242,11 @@ public class OrderController : ControllerBase
             Status = order.Status,
             TotalAmount = order.TotalAmount,
             CreatedAt = order.CreatedAt,
+            EstimatedTimeMinutes = order.EstimatedReadyMinutes,
+            EstimatedReadyAt = order.EstimatedReadyMinutes.HasValue
+                ? order.CreatedAt.AddMinutes(order.EstimatedReadyMinutes.Value).ToString("o")
+                : null,
+            SpecialInstructions = order.SpecialInstructions,
             Items = items
         };
     }

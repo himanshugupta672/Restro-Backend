@@ -17,6 +17,8 @@ public interface IOrderService
 
     Task<List<Order>> GetByTableId(int tableId);
 
+    Task<List<Order>> GetByCustomerIdAsync(int customerId);
+
     Task AcceptOrder(int orderId, int chefId);
 
     Task RejectOrder(int orderId, int chefId);
